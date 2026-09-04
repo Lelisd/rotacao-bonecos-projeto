@@ -263,6 +263,11 @@ function renderGrid(){
 const AVATAR_EXTENSIONS = ['png','jpg','jpeg','webp'];
 const avatarUrlCache = new Map(); // charId -> url string ou null (já verificado, sem imagem)
 
+// nomes alternativos de arquivo p/ personagens cujo nome no app é abreviado
+const AVATAR_ALIASES = {
+  'Robin': ['Nico Robin', 'Nico_Robin']
+};
+
 function avatarNameVariants(name){
   const variants = new Set();
   variants.add(name);
@@ -270,6 +275,10 @@ function avatarNameVariants(name){
   const noPunct = name.replace(/[.]/g, '').replace(/\s+/g, '_');
   variants.add(noPunct);
   variants.add(noPunct.replace(/_+/g, '_'));
+  (AVATAR_ALIASES[name] || []).forEach(alias => {
+    variants.add(alias);
+    variants.add(alias.replace(/\s+/g, '_'));
+  });
   return Array.from(variants);
 }
 
