@@ -279,6 +279,9 @@ function avatarNameVariants(name){
     variants.add(alias);
     variants.add(alias.replace(/\s+/g, '_'));
   });
+  // duplica tudo em minúsculo: no Windows local não faz diferença,
+  // mas o GitHub Pages roda em Linux e diferencia maiúsculas de minúsculas
+  Array.from(variants).forEach(v => variants.add(v.toLowerCase()));
   return Array.from(variants);
 }
 
