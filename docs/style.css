@@ -48,6 +48,11 @@
   .legend span{ display:flex; align-items:center; gap:6px; }
   .dot{ width:10px; height:10px; border-radius:50%; display:inline-block; }
 
+  .slot .avatar, .card .avatar, .history-avatar{
+    object-fit: cover;
+    border: 2px solid transparent;
+  }
+
   .friday-banner{
     display:none;
     align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;

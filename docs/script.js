@@ -69,27 +69,12 @@ function saveState(){
 function charById(id){ return characters.find(c=>c.id===id); }
 function initials(name){ return name.trim().slice(0,2).toUpperCase(); }
 
-// pega a data de hoje no fuso horário local (evita o desvio de 1 dia do UTC)
-function todayISO(){
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const day = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-}
-
-// converte uma string 'YYYY-MM-DD' num Date à meia-noite local (não UTC)
-function parseLocalDate(iso){
-  const [y,m,d] = iso.split('-').map(Number);
-  return new Date(y, m-1, d);
-}
-
 function statusOf(char){
   const idsInCurrent = [...currentWeek.bau1, ...currentWeek.bau2];
   if(idsInCurrent.includes(char.id)) return {label:'current', color:'var(--c-current)'};
   if(!char.lastRotation) return {label:'old', color:'var(--c-old)'};
 
-  const diffDays = Math.floor((parseLocalDate(todayISO()) - parseLocalDate(char.lastRotation)) / 86400000);
+  const diffDays = Math.floor((Date.now() - new Date(char.lastRotation)) / 86400000);
   if(diffDays <= 7) return {label:'current', color:'var(--c-current)'};
   if(diffDays <= 30) return {label:'month', color:'var(--c-month)'};
   if(diffDays <= 60) return {label:'2months', color:'var(--c-2months)'};
@@ -98,8 +83,27 @@ function statusOf(char){
 
 function formatDate(iso){
   if(!iso) return '--/--';
-  const [y,m,d] = iso.split('-');
-  return `${d}/${m}`;
+  const d = new Date(iso);
+  return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+// ---------- avatar (foto detectada em images/ ou iniciais) ----------
+function buildAvatarEl(char, className, statusColor){
+  const url = avatarUrlCache.get(char.id);
+  if(url){
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = char.name;
+    img.className = className;
+    img.style.borderRadius = '50%';
+    if(statusColor) img.style.borderColor = statusColor;
+    return img;
+  }
+  const div = document.createElement('div');
+  div.className = className;
+  if(statusColor) div.style.background = statusColor;
+  div.textContent = initials(char.name);
+  return div;
 }
 
 // ---------- render: painéis de semana ----------
@@ -122,10 +126,7 @@ function renderWeekPanel(containerId, weekObj){
       s.className = 'slot' + (char ? '' : ' empty');
       if(char){
         const st = statusOf(char);
-        const av = document.createElement('div');
-        av.className = 'avatar';
-        av.style.background = st.color;
-        av.textContent = initials(char.name);
+        const av = buildAvatarEl(char, 'avatar', st.color);
         const nm = document.createElement('div');
         nm.className = 'name';
         nm.textContent = char.name;
@@ -175,7 +176,7 @@ document.getElementById('slot-clear').onclick = () => {
 const HISTORY_LIMIT = 10;
 
 function confirmWeek(){
-  const today = todayISO();
+  const today = new Date().toISOString().slice(0,10);
   [...currentWeek.bau1, ...currentWeek.bau2].forEach(id=>{
     if(!id) return;
     const c = charById(id);
@@ -237,11 +238,17 @@ function renderGrid(){
     const card = document.createElement('div');
     card.className = 'card';
     card.style.borderColor = st.color;
-    card.innerHTML = `
-      <div class="avatar" style="background:${st.color}">${initials(c.name)}</div>
-      <div class="badge" style="background:${st.color}">${formatDate(c.lastRotation)}</div>
-      <div class="cname">${c.name}</div>
-    `;
+    const av = buildAvatarEl(c, 'avatar', st.color);
+    card.appendChild(av);
+    const badge = document.createElement('div');
+    badge.className = 'badge';
+    badge.style.background = st.color;
+    badge.textContent = formatDate(c.lastRotation);
+    card.appendChild(badge);
+    const nm = document.createElement('div');
+    nm.className = 'cname';
+    nm.textContent = c.name;
+    card.appendChild(nm);
     grid.appendChild(card);
   });
 
@@ -252,17 +259,57 @@ function renderGrid(){
   grid.appendChild(addCard);
 }
 
+// ---------- fotos automáticas (pasta images/, nome do arquivo = nome do personagem) ----------
+const AVATAR_EXTENSIONS = ['png','jpg','jpeg','webp'];
+const avatarUrlCache = new Map(); // charId -> url string ou null (já verificado, sem imagem)
+
+function avatarNameVariants(name){
+  const variants = new Set();
+  variants.add(name);
+  variants.add(name.replace(/\s+/g, '_'));
+  const noPunct = name.replace(/[.]/g, '').replace(/\s+/g, '_');
+  variants.add(noPunct);
+  variants.add(noPunct.replace(/_+/g, '_'));
+  return Array.from(variants);
+}
+
+function detectAvatarUrl(char){
+  return new Promise((resolve)=>{
+    const names = avatarNameVariants(char.name);
+    let i = 0, j = 0;
+    function tryNext(){
+      if(i >= names.length){ resolve(null); return; }
+      if(j >= AVATAR_EXTENSIONS.length){ i++; j = 0; tryNext(); return; }
+      const url = `images/${names[i]}.${AVATAR_EXTENSIONS[j]}`;
+      j++;
+      const probe = new Image();
+      probe.onload = () => resolve(url);
+      probe.onerror = tryNext;
+      probe.src = url;
+    }
+    tryNext();
+  });
+}
+
+async function refreshAvatarCache(chars){
+  const list = chars || characters;
+  await Promise.all(list.map(async c=>{
+    avatarUrlCache.set(c.id, await detectAvatarUrl(c));
+  }));
+}
+
 // ---------- adicionar boneco ----------
 document.getElementById('cancel-add').onclick = () => document.getElementById('add-dialog').close();
 
 function addCharacterFromDialog(){
   const name = document.getElementById('new-name').value.trim();
   if(!name) return;
-  characters.push(mkChar(name, null));
+  const newChar = mkChar(name, null);
+  characters.push(newChar);
   document.getElementById('new-name').value = '';
   document.getElementById('add-dialog').close();
   saveState();
-  renderAll();
+  refreshAvatarCache([newChar]).then(renderAll);
 }
 
 document.getElementById('confirm-add').onclick = addCharacterFromDialog;
@@ -286,7 +333,7 @@ document.getElementById('clear-data-btn').onclick = () => {
   lastConfirmedDate = null;
   saveState();
   document.getElementById('friday-banner').style.display = 'none';
-  renderAll();
+  refreshAvatarCache().then(renderAll);
 };
 
 function renderHistory(){
@@ -321,10 +368,8 @@ function renderHistory(){
         if(!id) return;
         const c = charById(id);
         if(!c) return;
-        const av = document.createElement('div');
-        av.className = 'history-avatar';
+        const av = buildAvatarEl(c, 'history-avatar');
         av.title = c.name;
-        av.textContent = initials(c.name);
         bauEl.appendChild(av);
       });
       bausEl.appendChild(bauEl);
@@ -353,12 +398,13 @@ function renderAll(){
     characters = defaultCharacters();
     saveState();
   }
+  await refreshAvatarCache();
   renderAll();
 
   // checa se hoje é sexta (dia 5) e a semana ainda não foi confirmada hoje
   const today = new Date();
-  const todayStr = todayISO();
-  if(today.getDay() === 5 && lastConfirmedDate !== todayStr){
+  const todayISO = today.toISOString().slice(0,10);
+  if(today.getDay() === 5 && lastConfirmedDate !== todayISO){
     document.getElementById('friday-banner').style.display = 'flex';
   }
 })();
