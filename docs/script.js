@@ -69,12 +69,27 @@ function saveState(){
 function charById(id){ return characters.find(c=>c.id===id); }
 function initials(name){ return name.trim().slice(0,2).toUpperCase(); }
 
+// pega a data de hoje no fuso horário local (evita o desvio de 1 dia do UTC)
+function todayISO(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+// converte uma string 'YYYY-MM-DD' num Date à meia-noite local (não UTC)
+function parseLocalDate(iso){
+  const [y,m,d] = iso.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+
 function statusOf(char){
   const idsInCurrent = [...currentWeek.bau1, ...currentWeek.bau2];
   if(idsInCurrent.includes(char.id)) return {label:'current', color:'var(--c-current)'};
   if(!char.lastRotation) return {label:'old', color:'var(--c-old)'};
 
-  const diffDays = Math.floor((Date.now() - new Date(char.lastRotation)) / 86400000);
+  const diffDays = Math.floor((parseLocalDate(todayISO()) - parseLocalDate(char.lastRotation)) / 86400000);
   if(diffDays <= 7) return {label:'current', color:'var(--c-current)'};
   if(diffDays <= 30) return {label:'month', color:'var(--c-month)'};
   if(diffDays <= 60) return {label:'2months', color:'var(--c-2months)'};
@@ -83,8 +98,8 @@ function statusOf(char){
 
 function formatDate(iso){
   if(!iso) return '--/--';
-  const d = new Date(iso);
-  return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}`;
 }
 
 // ---------- render: painéis de semana ----------
@@ -160,7 +175,7 @@ document.getElementById('slot-clear').onclick = () => {
 const HISTORY_LIMIT = 10;
 
 function confirmWeek(){
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayISO();
   [...currentWeek.bau1, ...currentWeek.bau2].forEach(id=>{
     if(!id) return;
     const c = charById(id);
@@ -342,8 +357,8 @@ function renderAll(){
 
   // checa se hoje é sexta (dia 5) e a semana ainda não foi confirmada hoje
   const today = new Date();
-  const todayISO = today.toISOString().slice(0,10);
-  if(today.getDay() === 5 && lastConfirmedDate !== todayISO){
+  const todayStr = todayISO();
+  if(today.getDay() === 5 && lastConfirmedDate !== todayStr){
     document.getElementById('friday-banner').style.display = 'flex';
   }
 })();
