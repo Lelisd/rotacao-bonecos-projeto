@@ -83,8 +83,16 @@ function statusOf(char){
 
 function formatDate(iso){
   if(!iso) return '--/--';
-  const d = new Date(iso);
-  return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+  const [y, m, d] = iso.split('-').map(Number);
+  return String(d).padStart(2,'0') + '/' + String(m).padStart(2,'0');
+}
+
+function localISODate(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
 }
 
 // ---------- avatar (foto detectada em images/ ou iniciais) ----------
@@ -176,7 +184,7 @@ document.getElementById('slot-clear').onclick = () => {
 const HISTORY_LIMIT = 10;
 
 function confirmWeek(){
-  const today = new Date().toISOString().slice(0,10);
+  const today = localISODate();
   [...currentWeek.bau1, ...currentWeek.bau2].forEach(id=>{
     if(!id) return;
     const c = charById(id);
@@ -415,7 +423,7 @@ function renderAll(){
 
   // checa se hoje é sexta (dia 5) e a semana ainda não foi confirmada hoje
   const today = new Date();
-  const todayISO = today.toISOString().slice(0,10);
+  const todayISO = localISODate();
   if(today.getDay() === 5 && lastConfirmedDate !== todayISO){
     document.getElementById('friday-banner').style.display = 'flex';
   }
