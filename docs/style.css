@@ -66,28 +66,28 @@
   .friday-banner strong{ color: var(--gold); }
 
   .history-title{
-    font-family:'Fredoka', sans-serif; font-weight:600; font-size:22px;
-    color: var(--gold); margin: 26px 0 14px;
+    font-family:'Fredoka', sans-serif; font-weight:600; font-size:28px;
+    color: var(--gold); margin: 30px 0 16px;
   }
-  .history-list{ display:flex; flex-direction:column; gap: 12px; }
+  .history-list{ display:flex; flex-direction:column; gap: 16px; }
   .history-item{
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 18px 22px;
-    display:flex; align-items:center; gap: 22px; flex-wrap:wrap;
+    border-radius: 14px;
+    padding: 24px 28px;
+    display:flex; align-items:center; gap: 28px; flex-wrap:wrap;
   }
-  .history-date{ font-size: 16px; color: var(--text-dim); width: 82px; flex-shrink:0; }
-  .history-baus{ display:flex; gap: 22px; flex-wrap:wrap; }
-  .history-bau{ display:flex; align-items:center; gap:8px; }
-  .history-bau-label{ font-size: 14px; color: var(--text-dim); margin-right:2px; }
+  .history-date{ font-size: 20px; color: var(--text-dim); width: 100px; flex-shrink:0; }
+  .history-baus{ display:flex; gap: 28px; flex-wrap:wrap; }
+  .history-bau{ display:flex; align-items:center; gap:10px; }
+  .history-bau-label{ font-size: 17px; color: var(--text-dim); margin-right:2px; }
   .history-avatar{
-    width:40px; height:40px; border-radius:50%;
+    width:56px; height:56px; border-radius:50%;
     display:flex; align-items:center; justify-content:center;
-    font-family:'Fredoka',sans-serif; font-weight:600; font-size:14.5px;
+    font-family:'Fredoka',sans-serif; font-weight:600; font-size:19px;
     color:#140B26; background: var(--gold);
   }
-  .history-empty{ color: var(--text-dim); font-size: 15px; }
+  .history-empty{ color: var(--text-dim); font-size: 18px; }
 
   .weeks{
     display:grid; grid-template-columns: 1fr 1fr; gap: 16px;
